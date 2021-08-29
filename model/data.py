@@ -6,7 +6,7 @@ To be used for training.
 import torch
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-import pdb
+#import pdb
 
 #convert to parse args eventually
 batch_size = 64
@@ -23,17 +23,17 @@ class DataNode():
     '''
     def __init__(self, ds_idx, y, n_class, ranks=None):#, n_input, n_hidden , n_class):
         #self.idx = idx
-        
+
         try:
             assert len(ds_idx) == len(y)
         except AssertionError:
-            print('len(ds_idx) != len(y)')
-            pdb.set_trace()
+            print('len(ds_idx) != len(y)', len(ds_idx), len(y))
+            #pdb.set_trace()
             raise AssertionError('len(ds_idx) != len(y)')
             
         datalen = len(y)
         cur_split = int(datalen*train_split)
-        
+
         #y are cluster labels.
         if ranks is not None:
                     

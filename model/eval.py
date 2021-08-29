@@ -23,6 +23,7 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 if __name__ == '__main__':
     
     opt = utils.parse_args()
+    opt.data_dir = "data"
 
     if True:
         if opt.glove:
@@ -45,12 +46,16 @@ if __name__ == '__main__':
         dist = utils.l2_dist(queryset, trainset)
         #dist += 2*torch.max(dist).item()*torch.eye(len(dist)) #torch.diag(torch.max(dist))
         val, neighbors = torch.topk(dist, k=opt.k, dim=1, largest=False)
-        
-    height = 1
+
+    if opt.normalize_data:
+        queryset = utils.normalize(queryset)
+
+
+    height = opt.height
     n_bins_l = list(range(1, 45, 2))
     n_bins_l = list(range(1, 100))
-    n_bins_l = list(range(1, 35, 1)) #[1]
-    n_clusters_l = [16]#[16] #[2]
+    n_bins_l = list(range(1, 70, 1)) #[1]
+    n_clusters_l = [opt.n_clusters]#[16] #[2]
         
     acc_mx = np.zeros((len(n_clusters_l), len(n_bins_l)))
     probe_mx = np.zeros((len(n_clusters_l), len(n_bins_l)))
@@ -59,8 +64,8 @@ if __name__ == '__main__':
     mult_l = list(range(2, 12))
     mult_l = [1,3,4,5,6,7,8,9,10,11,12]
     
-    mult_l = [.1, .5, .9, 1.1, 1.5 ]
-    mult_l = [2]
+    #mult_l = [.1, .5, .9, 1.1, 1.5 ]
+    mult_l = [5]
     for cur_mult in mult_l:
         opt.nn_mult = cur_mult        
         for i, n_clusters in enumerate(n_clusters_l):
@@ -70,7 +75,7 @@ if __name__ == '__main__':
                 acc_mx[i][j] = acc
                 probe_mx[i][j] = probe_count
                 probe95_mx[i][j] = probe_count95
-                if acc > 0.95:
+                if acc > 0.975:
                     break
             if j > col_max:
                 col_max = j

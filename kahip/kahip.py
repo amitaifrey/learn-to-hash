@@ -49,7 +49,6 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
     if n_class < 2:
         raise Exception('wrong number of parts: {}. Should be greater than or equal to 2.'.format(n_class))
 
-    kahip_config = 'strong'
     kahip_config = opt.kahip_config
 
     #if configuration != 'fast' and configuration != 'eco' and configuration != 'strong':

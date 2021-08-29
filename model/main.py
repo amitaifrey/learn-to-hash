@@ -9,7 +9,7 @@ import sys
 Block of net
 '''
 def net_block(n_in, n_out):
-    
+
     block = nn.Sequential(nn.Linear(n_in, n_out),
                           nn.BatchNorm1d(n_out),
                           nn.ReLU())
@@ -20,11 +20,11 @@ class Model(nn.Module):
         super(Model, self).__init__()
         self.opt = opt
         self.toplevel = toplevel
-        
+
         self.block1 = net_block(n_input, n_hidden)
         self.dropout = nn.Dropout(p=0.1)
         
-        if (opt.glove or opt.sift or opt.prefix10m):
+        if (opt.glove or opt.sift or opt.prefix10m or opt.lastfm):
             #if include skip connection:
             #self.block_mid = net_block(n_hidden + n_input, n_hidden)            
             self.block_mid = net_block(n_hidden, n_hidden)            
@@ -45,7 +45,7 @@ class Model(nn.Module):
         y = self.block1(x)
         #y = self.dropout(x1)
         
-        if self.opt.glove or self.opt.sift or self.opt.prefix10m:
+        if self.opt.glove or self.opt.sift or self.opt.prefix10m or self.opt.lastfm:
             #if include skip connection:
             #y = self.block_mid(torch.cat([x, y], dim=1))
             y = self.block_mid(y)

@@ -3,6 +3,8 @@
 Utilities functions for plotting and visualization.
 '''
 import matplotlib
+from matplotlib.ticker import FormatStrFormatter
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -34,9 +36,12 @@ def plot_kmeans(acc_mx, probe_mx, height, k, json_data, opt):
 
     if opt.glove:
         fig_path = osp.join(opt.data_dir, 'glove', 'kmeans_ht{}_2.jpg'.format(height))
+    elif opt.sift:
+        fig_path = osp.join(opt.data_dir, 'sift', 'kmeans_ht{}_2.jpg'.format(height))
     else:
         fig_path = osp.join(opt.data_dir, 'kmeans_ht{}_2.jpg'.format(height))
 
+    print(fig_path)
     fig.figure.savefig(fig_path)
 
 '''
@@ -123,6 +128,8 @@ def plot_single_ht(height):
     opt = utils.parse_args()
     if opt.glove:
         data_path = osp.join(opt.data_dir, 'glove', 'kmeans_ht{}.json'.format(height))
+    elif opt.sift:
+        data_path = osp.join(opt.data_dir, 'sift', 'kmeans_ht{}.json'.format(height))
     else:
         data_path = osp.join(opt.data_dir, 'kmeans_ht{}.json'.format(height))
     #use opt for name
@@ -165,34 +172,42 @@ Plot, line plot.
 Input:
 -x, y: np arrays, duplicities should already be included.
 '''
-def acc_probe_lineplot(probe_ar, acc_ar, method_l, height, n_clusters, opt):
+def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clusters, opt):
     if isinstance(probe_ar, torch.Tensor):
         probe_ar = probe_ar.numpy()
     if isinstance(acc_ar, torch.Tensor):
         acc_ar = acc_ar.numpy()
 
-    if opt.glove:
-        data_len = 1180000
-    elif opt.sift:
-        data_len = 1000000
-    else:
-        data_len = 60000
+    # if opt.glove:
+    #     data_len = 1180000
+    # elif opt.sift:
+    #     data_len = 1000000
+    # else:
+    #     data_len = 60000
         
     #probe_ar = np.log(probe_ar)
     probe_max = max([int(count) for count in probe_ar])
+    probe_min = min([int(count) for count in probe_ar])
     
-    df = pd.DataFrame({'probe_count':probe_ar, 'acc':acc_ar, 'method':method_l})
-    dashes = {'km':False, 'neural':True, 'km95':False, 'neural95':True}
-    palette = sns.color_palette("mako_r", 2)
-    palette = sns.color_palette("ch:2.5,-.2,dark=.3", n_colors=2)
-    
-    fig = sns.lineplot( x='acc', y='probe_count', hue='method', style='method', palette=palette, markers=True, data=df)
+    df = pd.DataFrame({'probe_count':probe_ar, 'acc':acc_ar, 'method':method_l, "hue":hue_l, "style": style_l})
+    #print(df)
+    #dashes = {'km':False, 'neural':True, 'km95':False, 'neural95':True}
+    #palette = sns.color_palette("mako_r", 2)
+    #palette = sns.color_palette("ch:2.5,-.2,dark=.3", n_colors=4)
+
+    palette = {"km": "#003FFF", "neural": "#E8000B"}
+    markers = {"norm": "s", "95": "^"}
+
+    fig = matplotlib.pyplot.gcf()
+    fig.set_size_inches(10, 5.5)
+    #sns.set_style("whitegrid")
+    fig = sns.lineplot(x='probe_count', y='acc', hue='hue', style='style', markers=markers, data=df, legend=False, palette=palette)
 
     if opt.glove:
         data_name = 'GloVe'
     elif opt.sift:
         data_name = 'SIFT'
-    if opt.glove_c:
+    elif opt.glove_c:
         data_name = 'GloVeCatalyzer'
     elif opt.sift_c:
         data_name = 'SIFTCatalyzer'
@@ -200,11 +215,25 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, height, n_clusters, opt):
         data_name = 'MNIST'
         
     fig.set_title('Number of candidates vs accuracy on {}. m: {} on {} levels'.format(data_name, n_clusters, height))
-    fig.set(xlabel='Accuracy', ylabel='Number of candidates')
-    fig.set(xlim=(.5, .97))
-    fig.set(ylim=(-200, probe_max+300))
-    fig_path = osp.join(opt.data_dir, '{}_ht{}_{}.jpg'.format(data_name, height, n_clusters))
-    
+    fig.set(ylabel='Accuracy', xlabel='Number of candidates')
+
+    fig.set(ylim=(.75, .97))
+    y_major_ticks = np.arange(0.75, 1, 0.05)
+    fig.set_yticks(y_major_ticks)
+
+    xticks = fig.get_xticks()
+    i = 0
+    while xticks[i+1] < probe_min:
+        i += 1
+    fig.set(xlim=(xticks[i], probe_max+300))
+
+    fig.spines['right'].set_visible(False)
+    fig.spines['top'].set_visible(False)
+    fig.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    plt.grid()
+    plt.legend(loc='lower right', labels=['k-means (average)', 'k-means (0.95-quantile)', 'Neural LSH (average)', 'Neural LSH (0.95-quantile)'])
+
+    fig_path = osp.join(utils.results_dir, '{}_{}_{}.jpg'.format(data_name, n_clusters, height))
     fig.figure.savefig(fig_path)
     print('Figure saved to {}'.format(fig_path))
 
@@ -221,16 +250,26 @@ def acc_probe_lineplot_main():
     #if with_catalyzer:
     #    km_data_path = osp.join(utils.data_dir, 'km_plot_data_c')
     #else:
-    km_data_path = osp.join(utils.data_dir, 'km_plot_data')
-    train_data_path = osp.join(utils.data_dir, 'train_plot_data')
+
+    if opt.glove:
+        data_name = "glove"
+    elif opt.sift:
+        data_name = "sift"
+    else:
+        raise Exception("no data name")
+
+    km_data_path = osp.join(utils.results_dir, '{}_km_{}_{}.txt'.format(data_name, opt.n_clusters, opt.height))
+    train_data_path = osp.join(utils.results_dir, '{}_neural_{}_{}.txt'.format(data_name, opt.n_clusters, opt.height))
     
     #data format example: data_str_km = '0.788 / 50803.0 0.791 / 53157.0 0.795 / 55564.0 0.798 / 58021.0'
-    
+
     data_str_km = utils.load_lines(km_data_path)[0]
     data_str_train = utils.load_lines(train_data_path)[0]
-    
+
     label_ar = ['km', 'neural']
     method_l = []
+    hue_l = []
+    style_l = []
     acc_l = []
     probe_l = []
     #determine this dynamically
@@ -250,29 +289,35 @@ def acc_probe_lineplot_main():
         acc_l.extend(data_ar[0::step])
         probe_l.extend(data_ar[1::step])
         method_l.extend([label_ar[i]]*(len(data_ar)//step))
+        hue_l.extend([label_ar[i]] * (len(data_ar) // step))
+        style_l.extend(["norm"] * (len(data_ar) // step))
+
+        acc_l.extend(data_ar[0::step])
+        probe_l.extend(data_ar[2::step])
+        method_l.extend([label_ar[i] + "_95"] * (len(data_ar) // step))
+        hue_l.extend([label_ar[i]] * (len(data_ar) // step))
+        style_l.extend(["95"] * (len(data_ar) // step))
         
-        if False and probe95_plot:
-            acc_l.extend(data_ar[0::step])
-            probe_l.extend(data_ar[2::step])
-            method_l.extend([label_ar[i]+'95']*(len(data_ar)//step))
+        # if False and probe95_plot:
+        #     acc_l.extend(data_ar[0::step])
+        #     probe_l.extend(data_ar[2::step])
+        #     method_l.extend([label_ar[i]+'95']*(len(data_ar)//step))
         
     acc_ar = np.array(acc_l)
     probe_ar = np.array(probe_l)
-    
-    
-    height = 1
-    n_clusters = 256
-    acc_probe_lineplot(probe_ar, acc_ar, method_l, height, n_clusters, opt)    
+
+
+    acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, opt.height, opt.n_clusters, opt)
     
 if __name__=='__main__':
 
     if True:
         acc_probe_lineplot_main()
-    else:
-        plot_single = False
-        if plot_single:
-            height = 2
-            plot_single_ht(height)
-        else:
-            height_l = [1, 2, 3]
-            plot_multi_ht(height_l)
+    # else:
+    #     plot_single = True
+    #     if plot_single:
+    #         height = 2
+    #         plot_single_ht(height)
+    #     else:
+    #         height_l = [1, 2, 3]
+    #         plot_multi_ht(height_l)

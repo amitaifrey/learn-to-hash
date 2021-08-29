@@ -33,7 +33,7 @@ class TrainNode():
         toplevel = toplevel if toplevel is not None else (True if height > 0 else False)
                 
         if height == 0 and not toplevel:
-            if (opt.glove or opt.sift or opt.prefix10m):
+            if (opt.glove or opt.sift or opt.prefix10m or opt.lastfm):
                 self.n_hidden = int(opt.n_hidden//1.3)
             else:
                 self.n_hidden = opt.n_hidden//2
@@ -424,6 +424,8 @@ def deserialize_eval(queryset, answers, height, n_clusters, n_bins, opt):
         data_name = 'sift'
     elif opt.prefix10m:
         data_name = 'prefix10m'
+    elif opt.lastfm:
+        data_name = 'lastfm'
     else:
         data_name = 'mnist'
     #eval_root = utils.pickle_load(osp.join(opt.data_dir, 'evalroot_{}_ht{}_{}svm'.format(data_name, height, n_clusters)))
@@ -498,6 +500,8 @@ if __name__ == '__main__':
             res_path = osp.join('results', 'glove_train.md')
         elif opt.sift:
             res_path = osp.join('results', 'sift_train.md')
+        elif opt.lastfm:
+            res_path = osp.join('results', 'lastfm_train.md')
         else:
             res_path = osp.join('results', 'mnist_train.md')
         with open(res_path, 'a') as file:

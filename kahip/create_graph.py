@@ -26,11 +26,11 @@ Returns:
 -ranks, tensor 
 '''
 def create_knn_graph(data, k, opt=None):
-
+    print("creating graph")
     if opt != None and hasattr(opt, 'ranks_path'):
         ranks = np.load(opt.ranks_path)
         ranks = torch.from_numpy(ranks)
-        pdb.set_trace()
+        #pdb.set_trace()
     elif opt != None and opt.normalize_data:
         '''
         data /= data.norm(p=2, dim=-1, keepdim=True).clamp(min=1e-3)
@@ -138,8 +138,8 @@ def write_knn_graph(ranks, path):
     #print(ranks.size())
     
     is_tensor = isinstance(ranks, torch.Tensor)
-    print('in write knn graph')
-    pdb.set_trace()
+    #print('in write knn graph')
+    #pdb.set_trace()
     
     
     if is_tensor:
@@ -151,14 +151,14 @@ def write_knn_graph(ranks, path):
         [[(edge_l.append((i, j)) if i < j else edge_l.append((j, i))) for j in row] for i,row in enumerate(ranks,1)]
         weighted_n_edges = np.sum(np.sum([len(row) for row in ranks]))
 
-    print('weighted_n_edges ', weighted_n_edges)
+    #print('weighted_n_edges ', weighted_n_edges)
     edge_counter = Counter(edge_l)
     n_edges = len(edge_counter)
     
     if DEBUG:
         print('rank ', ranks)
         print('edge counter {}'.format(edge_counter))
-    print('edge_set len {}'.format(n_edges))
+        print('edge_set len {}'.format(n_edges))
     #use os.line_sep 
     ##s = '\n'.join([' '.join([str(i.item()) for i in row]) for row in ranks])
     d = defaultdict(set)
@@ -179,7 +179,7 @@ def write_knn_graph(ranks, path):
     s2 = str(len(ranks)) + ' ' + str(n_edges) + ' 1 \n' + s2
     with open(path, 'w') as file:
         file.write(s2)
-        print('written to ', path)
+        #print('written to ', path)
     return weighted_n_edges
 
 def deserialize_create_graph():
@@ -187,11 +187,25 @@ def deserialize_create_graph():
     
     ##data = torch.from_numpy(np.load('../data/queries_unnorm.npy'))
     #data = torch.from_numpy(np.load(osp.join(utils.data_dir, 'sift_dataset_unnorm.npy')))
-    dataset_name = 'prefix10m' #'glove'
+    if opt.glove:
+        dataset_name = 'glove' #'prefix10m' #'glove'
+    elif opt.sift:
+        dataset_name = 'sift'  # 'prefix10m' #'glove'
+    elif opt.lastfm:
+        dataset_name = 'lastfm'  # 'prefix10m' #'glove'
+    else:
+        raise Exception("no valid dataset")
     #opt.ranks_path = 'data/{}_answers.npy'.format(dataset_name)
     
     #10 is subsampling frequency
-    data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset.npy'.format(dataset_name))))
+    #data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset.npy'.format(dataset_name))))
+    data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset_unnorm.npy'.format(dataset_name))))
+
+    if torch.cuda.is_available():
+        data.to(device="cuda")
+
+    #data = utils.normalize(data)
+    opt.normalize_data = True
     #subsample_ = False
     subsample = 0 #10
     if subsample > 0:        
@@ -201,7 +215,7 @@ def deserialize_create_graph():
         pdb.set_trace()
     #data = data[192424:192436]
     #data[-1] = data[1]
-    k=10
+    k=100
     if subsample > 0:
         path_to = os.path.join(utils.data_dir, '{}{}_sub{}'.format(dataset_name, k, subsample)+graph_file) #'../data/knn.graph'
     else:

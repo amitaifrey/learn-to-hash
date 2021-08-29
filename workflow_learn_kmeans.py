@@ -50,7 +50,6 @@ class KNode():
                                 ds2bins[idx] = self.bin_idx
                 
         def create_child_nodes(self, dataset, ds2bins, ht2cutsz, opt):
-
                 self.children = []
                 if len(self.d_idx) < self.n_clusters:
                         if len(self.d_idx) <= 1:                        
@@ -62,12 +61,11 @@ class KNode():
                 
                 ds = dataset[self.d_idx]
                 #qu = queries[self.q_idx]
-                
+
                 child_d_idx_l, self.solver = k_means(ds, self.d_idx, ht2cutsz, self.height, self.n_clusters, opt)
                 #self.d_idx2dist = {self.d_idx[i] : self.d_dist_idx[i] for i in range(len(self.d_idx)) }
                 #self.q_idx2dist = {self.q_idx[i] : self.q_dist_idx[i] for i in range(len(self.q_idx)) }
-                                
-                for i in range(self.n_clusters):                        
+                for i in range(self.n_clusters):
                         d_idx = self.d_idx[child_d_idx_l[i]]
                         #q_idx = self.q_idx[child_q_idx_l[i]]                        
                         node = KNode(d_idx, dataset, self.n_clusters, self.height-1, ds2bins, ht2cutsz, opt)
@@ -83,23 +81,22 @@ def k_means(dataset, dataset_idx, ht2cutsz, height, n_clusters, opt): #ranks
         num_points = dataset.shape[0]
 
         dimension = dataset.shape[1]
-        
         use_kahip_solver = False
         if opt.kmeans_use_kahip_height == height:
                 use_kahip_solver = True
         if use_kahip_solver:
                 solver = kahip_solver.KahipSolver()
-        elif opt.fast_kmeans:                
+        elif opt.fast_kmeans:
                 solver = kmeans.FastKMeans(dataset, n_clusters, opt)
-        elif opt.itq:                
+        elif opt.itq:
                 solver = itq.ITQSolver(dataset, n_clusters)
-        elif opt.cplsh:   
+        elif opt.cplsh:
                 solver = cplsh.CPLshSolver(dataset, n_clusters, opt)
         elif opt.pca:
                 assert n_clusters == 2
                 solver = pca.PCASolver(dataset, opt)
         elif opt.st:
-                assert n_clusters == 2                
+                assert n_clusters == 2
                 solver = pca.STSolver(dataset, opt.glob_st_ranks, dataset_idx, opt)                
         elif opt.rp:
                 if n_clusters != 2:
@@ -340,7 +337,7 @@ def run_kmeans(ds, qu, neigh, n_bins, n_clusters, height, ht2cutsz, opt):
                 #can't serialize cpp object
                 root = opt.cplsh_root
         else:
-                print("Building ...")                
+                print("Building ...")
                 d_idx = np.array(list(range(len(ds))))
                 #q_idx = np.array(list(range(len(qu))))
                 
@@ -361,24 +358,25 @@ def run_kmeans(ds, qu, neigh, n_bins, n_clusters, height, ht2cutsz, opt):
         
 def run_main(height_preset, ds, qu, neigh, opt):
                 
-        if height_preset == 1:
-                n_clusters_l = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]#, 16384, 32768, 60000] #65536]
-                n_clusters_l = [1<<16]
-                n_clusters_l = [16, 256] #[16]
-                n_clusters_l = [16]
-                #n_clusters_l = [1<<8]
-        elif height_preset == 2:
-                n_clusters_l = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024] #2
-                n_clusters_l = [16, 256] #[16]
-                n_clusters_l = [256]
-        elif height_preset == 3:
-                n_clusters_l = [2, 4, 8, 16, 32, 64]
-                n_clusters_l = [2]
-        elif height_preset in range(11):
-                n_clusters_l = [2]
-        else:
-                raise Exception('No n_clusters for height {}'.format(height_preset))
-        
+        # if height_preset == 1:
+        #         n_clusters_l = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]#, 16384, 32768, 60000] #65536]
+        #         n_clusters_l = [1<<16]
+        #         n_clusters_l = [16, 256] #[16]
+        #         n_clusters_l = [256]
+        #         #n_clusters_l = [1<<8]
+        # elif height_preset == 2:
+        #         n_clusters_l = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024] #2
+        #         n_clusters_l = [16, 256] #[16]
+        #         n_clusters_l = [16]
+        # elif height_preset == 3:
+        #         n_clusters_l = [2, 4, 8, 16, 32, 64]
+        #         n_clusters_l = [2]
+        # elif height_preset in range(11):
+        #         n_clusters_l = [2]
+        # else:
+        #         raise Exception('No n_clusters for height {}'.format(height_preset))
+
+        n_clusters_l = [opt.n_clusters]
         print('HEIGHT: {} n_clusters: {}'.format(height_preset, n_clusters_l))
         
         #if height_preset != 1 and opt.itq:
@@ -412,7 +410,7 @@ def run_main(height_preset, ds, qu, neigh, opt):
                         serial_data['height'] = height
                 else:
                         height = math.floor(math.log(len(ds), n_clusters))
-                bin_count = 40 #1
+                bin_count = 1 #40 #1
                                
                 acc = 0
                 probe = 0
@@ -486,7 +484,9 @@ def run_main(height_preset, ds, qu, neigh, opt):
         elif opt.rp:
                 cur_method = 'Random Projection'                
         elif opt.cplsh:
-                cur_method = 'Cross Polytope LSH'                
+                cur_method = 'Cross Polytope LSH'
+
+        print("Method: ", cur_method)
                 
         if opt.write_res: #False 
                 if opt.glove:
@@ -540,7 +540,7 @@ if __name__ == '__main__':
                 print('NOTE: will use kahip solver for height {}'.format(opt.kmeans_use_kahip_height))
         
         height_l = range(2, 10)
-        height_l = [2]
+        height_l = [1]
         #height_l = [2]
         #height_l = range(1, 9)
         #height_l = [9,10]

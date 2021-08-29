@@ -1,7 +1,8 @@
 
 #config file specifying relevant paths, as absolute paths
 
-kahip_dir=path_to_KaHIP
-data_dir=path_to_data_directory
-glove_dir=path_to_glove_graph_directory
-sift_dir=path_to_sift_graph_directory
+kahip_dir="../KaHIP"
+data_dir=data
+glove_dir=data/glove
+sift_dir=data/sift
+lastfm_dir=data/lastfm

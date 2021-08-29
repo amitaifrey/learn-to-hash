@@ -3,7 +3,7 @@
 Pipeline to:
 -create knn graphs from dataset.
 -recursively partitions dataset using KaHIP in parallel.
--learn tree of neural networks in tandem with building partitions tree.
+-learn tree of neural networks in tandem with  partitions tree.
 '''
 
 import _init_paths
@@ -18,13 +18,12 @@ import argparse
 import utils
 import math
 from model import train
-from data import DataNode
+from model.data import DataNode
 import utils
 from collections import defaultdict
 import multiprocessing as mp
 import kmeans
 import logreg
-
 import pdb
 
 graph_file = create_graph.graph_file
@@ -47,7 +46,7 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
     if n_class < 2:
         raise Exception('wrong number of parts: {}. Should be greater than or equal to 2.'.format(n_class))
 
-    kahip_config = 'strong'
+    opt.kahip_config = 'fast'
     kahip_config = opt.kahip_config
 
     #if configuration != 'fast' and configuration != 'eco' and configuration != 'strong':
@@ -62,31 +61,37 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
     branching_l_len = len(branching_l)
     #if True or branching_l_len == 1:
 
+
     #parts_path = opt.parts_path_root + str(n_class) + str(kahip_config) + '{}'.format(opt.dataset_name)+''.join(branching_l) + 'ht' + str(height) + '_{}'.format('50') #'sub10')#opt.k_graph)
     parts_path = opt.parts_path_root + str(n_class) + '{}'.format(opt.dataset_name)+''.join(branching_l) + 'ht' + str(height) + '_{}_{}'.format(opt.k_graph, opt.k)
 
     #else:
     #    parts_path = opt.parts_path_root + str(n_class) + str(kahip_config)
-        
+
     if opt.glove and (branching_l_len == 1):
         #if glove top level, use precomputed partition
         parts_path = utils.glove_top_parts_path(opt.n_clusters, opt)
     elif opt.sift and (branching_l_len == 1):
         #if glove top level, use precomputed partition
-        parts_path = utils.sift_top_parts_path(opt.n_clusters, opt) 
+        parts_path = utils.sift_top_parts_path(opt.n_clusters, opt)
+    elif opt.lastfm and (branching_l_len == 1):
+        # if glove top level, use precomputed partition
+        parts_path = utils.lastfm_top_parts_path(opt.n_clusters, opt)
     elif opt.prefix10m and (branching_l_len == 1):
         #if glove top level, use precomputed partition
         parts_path = utils.prefix10m_top_parts_path(opt.n_clusters, opt)      
-    elif (branching_l_len > 1 or not os.path.exists(parts_path)):        
+    if not os.path.exists(parts_path) or branching_l_len > 1:
+        # print("partitioning! parts_path is {}".format(parts_path))
         #cmd = "LD_LIBRARY_PATH=./KaHIP/extern/argtable-2.10/lib ./KaHIP/deploy/kaffpa " + graph_file + " --preconfiguration=" + configuration + " --output_filename=" + output_file + " --k=" + str(num_parts)   
-        cmd = os.path.join(utils.kahip_dir, "deploy", "kaffpa") + ' ' + graph_path + " --preconfiguration=" + kahip_config + " --output_filename=" + parts_path + " --k=" + str(n_class) #+ " --imbalance=" + str(3)
-        pdb.set_trace()
+        cmd = os.path.join(utils.kahip_dir, "deploy", "kaffpa") + ' ' + graph_path + " --preconfiguration=" + kahip_config + " --output_filename=" + \
+              parts_path + " --k=" + str(n_class) + " > /dev/null" #+ " --imbalance=" + str(3)
+        #pdb.set_trace()
         if os.system(cmd) != 0:
             raise Exception('Kahip error')
 
         #raise exception here if just want partitioning of top level
-        print('parts path', parts_path)
-        raise Exception('done partitioning!', parts_path)
+        # print('parts path', parts_path)
+        #raise Exception('done partitioning!', parts_path)
 
     return parts_path
 
@@ -109,8 +114,9 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
     '''
     For 2nd level, SIFT, say 64 parts, beyond 25 epochs train does not improve much.
     '''
-    if opt.glove or opt.sift:
-        n_epochs = 18 if len(branching_l)==1 else 15 #44 opt.n_epochs #opt.n_epochs ################stopping mechanism 65. 18 if len(branching_l)==1 else 15 <-for MCCE loss  #glove+sift: 18 then 15
+    if opt.glove or opt.sift or opt.lastfm:
+        n_epochs = 18 if len(branching_l)==1 else 15 #44 opt.n_epochs #opt.n_epochs ################stopping mechanism 65. 18 if len(branching_l)==1 else 15
+        # <-for MCCE loss  #glove+sift: 18 then 15
     else:
         n_epochs = 18 if len(branching_l)==1 else 10 #opt.n_epochs #opt.n_epochs ################stopping mechanism 65.
     #85 good top level epoch number for MNIST. #glove+sift: 18 then 10
@@ -187,8 +193,8 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
             
             ranks = utils.dist_rank(dataset_data, k=n_class, data_y=centers, include_self=True)
             '''
-            
-            dsnode = DataNode(ds_idx, classes, n_class, ranks=ds_idx_ranks)
+
+            dsnode = DataNode(ds_idx, classes, opt.n_class, ranks=ds_idx_ranks)
             
             #if opt.sift:          
                 #center as well?
@@ -255,7 +261,7 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
             train_node.probe_count_l = [(classes == i).sum().item() for i in range(n_class) ]
         else:
             raise Exception('Action must be either kahip km or train')
-    dsnode = DataNode(ds_idx, classes, n_class)    
+    dsnode = DataNode(ds_idx, classes, opt.n_class)
     #ds_idx needs to be indices wrt entire dataset.    
     #y are labels of clusters, indices 0 to num_cluster. 
     
@@ -280,7 +286,7 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
             child_branching_l = list(branching_l)
             child_branching_l.append(str(cur_class))
 
-            if len(child_ds_idx) < opt.k:
+            if len(child_ds_idx) <= opt.k:
                 #create train_node without model, but with base_idx, leaf_idx etc. Need to have placeholder for correct indexing.
                 child_tn = train.TrainNode(opt.n_epochs, opt, height-1)
                 child_tn.base_idx = len(set(idx2bin.values()))
@@ -298,7 +304,7 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
                 #those knn graphs for kahip are one-based, and are lists and not tensors due to weights.
                 if next_act == 'train':
                     k1 = max(1, int(opt.nn_mult*opt.k))
-                    ranks_l.append(utils.dist_rank(dataset[child_ds_idx], k=k1))
+                    ranks_l.append(utils.dist_rank(dataset[child_ds_idx], k=k1, opt=opt))
                 else:
                     ranks_l.append([])
                 if parallelize:
@@ -395,14 +401,14 @@ def create_data_tree(dataset, all_ranks_data, ds_idx, train_node, idx2bin, heigh
 
     (all_ranks, idx2weights) = all_ranks_data
 
-    datalen = len(data_idx)
+    datalen = len(ds_idx)
     if datalen <= opt.k:
         return None
 
     #create graph from data.
     data = dataset[ds_idx]
-    graph_path = os.path.join(opt.data_dir, 'graph', opt.graph_file + str(opt.n_clusters) + '_'+''.join(branching_l) + 'ht' + str(height)) 
-    
+    graph_path = os.path.join(opt.graph_file + '_' + str(opt.n_clusters) + '_' + ''.join(branching_l) + 'ht' + str(height))
+
     #ranks are 1-based
  
     if len(branching_l) == 1:
@@ -424,28 +430,29 @@ def create_data_tree_root(dataset, all_ranks, ds_idx, train_node, idx2bin, heigh
     datalen = len(ds_idx)
     if datalen <= opt.k:
         return None
-    graph_path = os.path.join(opt.data_dir, opt.graph_file) #'../data/knn.graph'
+    graph_path = opt.graph_file #'../data/knn.graph'
+    print("graph path is: {}".format(graph_path))
     
     #ranks are 1-based
-    if opt.glove or opt.sift or opt.prefix10m: #and len(branching_l) == 1:
+    if opt.glove or opt.sift or opt.prefix10m or opt.lastfm: #and len(branching_l) == 1:
 
-        if opt.glove:
-            #custom paths
-        #if opt.glove and opt.k_graph==50: #april, 50NN graph file
-            #graph_path = os.path.join(opt.data_dir, 'glove50_'+opt.graph_file) #'../data/knn.graph'
-            graph_path = os.path.join(opt.data_dir, opt.graph_file) #'../data/knn.graph'
-            #graph_path = os.path.join(opt.data_dir, 'glove10_sub10knn.graph')
-            print('graph file {}'.format(graph_path))
+        # if opt.glove:
+        #     #custom paths
+        # #if opt.glove and opt.k_graph==50: #april, 50NN graph file
+        #     #graph_path = os.path.join(opt.data_dir, 'glove50_'+opt.graph_file) #'../data/knn.graph'
+        #     graph_path = os.path.join(opt.data_dir, opt.graph_file) #'../data/knn.graph'
+        #     #graph_path = os.path.join(opt.data_dir, 'glove10_sub10knn.graph')
+        #     print('graph file {}'.format(graph_path))
         parts_path = run_kahip(graph_path, datalen, branching_l, height, opt)
-        print('Done partitioning top level!')
+        print('Done partitioning top level! path: {}'.format(parts_path))
         lines = utils.load_lines(parts_path)
         classes = [int(line) for line in lines]
-        
+
         #read in all_ranks, for partitioning on further levels.
         all_ranks, idx2weights = read_all_ranks(opt)
         if opt.dataset_name != 'prefix10m':
             k1 = max(1, int(opt.nn_mult*opt.k))
-            ranks = utils.dist_rank(dataset, k=k1)
+            ranks = utils.dist_rank(dataset, k=k1, opt=opt)
         else:
             #subtract 1 as graph was created with 1-indexing for kahip.
             ranks = torch.load('/large/prefix10m10knn.graph.pt') - 1
@@ -491,20 +498,8 @@ Note these neighbors are not ranked to distance, they are
 sorted according to index.
 '''
 def read_all_ranks(opt, path=None):
-    if opt.glove:
-        graph_path = osp.join(utils.glove_dir, 'graph.txt')
-    elif opt.sift:
-        graph_path = osp.join(utils.data_dir, 'sift_graph_10', 'graph.txt')
-    elif opt.prefix10m:
-        graph_path = osp.join(utils.data_dir, 'prefix10m_graph_10.txt')       
-    else:
-        if path is not None:
-            graph_path = path
-        else:
-            raise Exception('Cannot read precomputed knn graph for unknown type data')
-    
     ranks = []    
-    lines = utils.load_lines(graph_path)[1:]
+    lines = utils.load_lines(opt.graph_file)[1:]
     #tuples of 2 indices, and their weights
     idx2weights = {}
     
@@ -596,28 +591,28 @@ def run_kmkahip(height_preset, opt, dataset, queryset, neighbors):
     print('Configs: {} \n Starting data processing and training ...'.format(opt))
     #this root node is a dummy node, since it doesn't have a trained model or idx2bin
     train_node = train.TrainNode(-1, opt, -1)
-    
+
     swap_query_to_data = False
     if swap_query_to_data:
         print('** NOTE: Modifying queryset as part of dataset **')        
         queryset = dataset[:11000]
         #queryset = dataset
-        neighbors = utils.dist_rank(queryset, k=opt.k, data_y=dataset, largest=False)        
+        neighbors = utils.dist_rank(queryset, k=opt.k, data_y=dataset, largest=False, opt=opt)
         #dist += 2*torch.max(dist).item()*torch.eye(len(dist)) #torch.diag(torch.max(dist))
         #val, neighbors = torch.topk(dist, k=opt.k, dim=1, largest=False)        
     
     #dsnode_path = opt.dsnode_path + str(opt.n_clusters)
     #dsnode = utils.pickle_load(dsnode_path)
-    
+
     #check if need to normalize data. Remove second conditions eventually.
-    if opt.normalize_data and dataset[0].norm(p=2).item() != 1 and not opt.glove:
+    if opt.normalize_data:# and dataset[0].norm(p=2).item() != 1:# and not opt.glove:
         print('Normalizing data ...')
         dataset = utils.normalize(dataset)
         queryset = utils.normalize(queryset)
-        
+
     #create data tree used for training
     n_clusters = opt.n_clusters
-    
+
     height = height_preset
     n_bins = 1
     
@@ -629,7 +624,7 @@ def run_kmkahip(height_preset, opt, dataset, queryset, neighbors):
     #used for memoizing partition results
     branching_l = ['0']
     all_ranks = None
-    
+    print("creating root")
     root_dsnode = create_data_tree_root(dataset, all_ranks, ds_idx, train_node, idx2bin, height, branching_l,ht2cutsz, opt)
     print('Done creating training tree. Starting evaluation ...')
 
@@ -657,6 +652,8 @@ def run_kmkahip(height_preset, opt, dataset, queryset, neighbors):
             data_name = 'glove'
         elif opt.prefix10m:
             data_name = 'prefix10m'
+        elif opt.lastfm:
+            data_name = 'lastfm'
         else:
             data_name = 'mnist'
         idx2bin = eval_root.idx2bin
@@ -678,6 +675,9 @@ def run_kmkahip(height_preset, opt, dataset, queryset, neighbors):
     
 if __name__ == '__main__':
     opt = utils.parse_args()
+
+    opt.data_dir = "data"
+
     n_cluster_l = [2, 4, 16, 32, 64, 128, 256]
     n_cluster_l = [256]
     n_cluster_l = [8] #[64] #[2] #[16]

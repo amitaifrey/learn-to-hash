@@ -24,7 +24,6 @@ class CPLshSolver:
     n_clusters should be power of 2 for cross polytope LSH
     '''
     def __init__(self, dataset, n_clusters, opt):
-                
         if isinstance(dataset, np.ndarray):
             dataset = torch.from_numpy(dataset).to(utils.device)
 
@@ -36,7 +35,7 @@ class CPLshSolver:
         #pdb.set_trace()
         if n_c != 1:
             pdb.set_trace()
-        
+
         assert n_c == 1
         #second parameter is number of bits, last parameter is seed.
         self.cplsh = _multiprobe.Multiprobe(dataset.size(-1), n_poly, 4057218)
