@@ -36,6 +36,8 @@ if __name__ == '__main__':
     #Note that if 'kahip' is included, evaluation must be on training rather than test set, since partitioning was performed on training, but not test, set.
     #e.g.: opt.level2action = {0:'km', 1:'train', 3:'train'}
     opt.level2action = {0:'train', 1:'train'}
+    if opt.height == 2 and opt.n_clusters == 256:
+        opt.level2action = {0: 'km', 1: 'train'}
     
     for n_cluster in n_cluster_l:
         print('n_cluster {}'.format(n_cluster))

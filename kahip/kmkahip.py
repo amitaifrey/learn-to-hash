@@ -79,12 +79,15 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
         parts_path = utils.lastfm_top_parts_path(opt.n_clusters, opt)
     elif opt.prefix10m and (branching_l_len == 1):
         #if glove top level, use precomputed partition
-        parts_path = utils.prefix10m_top_parts_path(opt.n_clusters, opt)      
-    if not os.path.exists(parts_path) or branching_l_len > 1:
-        # print("partitioning! parts_path is {}".format(parts_path))
+        parts_path = utils.prefix10m_top_parts_path(opt.n_clusters, opt)
+
+    if not os.path.exists(parts_path):# or branching_l_len > 1:
+        print("partitioning! parts_path is {}".format(parts_path))
+        print(os.path.join(utils.kahip_dir, "deploy", "kaffpa") + ' ' + graph_path + " --preconfiguration=" + kahip_config + " --output_filename=" + \
+              parts_path + " --k=" + str(n_class) )#+ " > /dev/null" #+ " --imbalance=" + str(3)))
         #cmd = "LD_LIBRARY_PATH=./KaHIP/extern/argtable-2.10/lib ./KaHIP/deploy/kaffpa " + graph_file + " --preconfiguration=" + configuration + " --output_filename=" + output_file + " --k=" + str(num_parts)   
         cmd = os.path.join(utils.kahip_dir, "deploy", "kaffpa") + ' ' + graph_path + " --preconfiguration=" + kahip_config + " --output_filename=" + \
-              parts_path + " --k=" + str(n_class) + " > /dev/null" #+ " --imbalance=" + str(3)
+              parts_path + " --k=" + str(n_class) #+ " > /dev/null" #+ " --imbalance=" + str(3)
         #pdb.set_trace()
         if os.system(cmd) != 0:
             raise Exception('Kahip error')
@@ -378,6 +381,7 @@ def process_child(ranks, graph_path, datalen, branching_l, height, idx2classes, 
     n_edges = create_graph.write_knn_graph(ranks, graph_path)
     
     parts_path = run_kahip(graph_path, datalen, branching_l, height, opt)
+    print(parts_path)
 
     lines = utils.load_lines(parts_path)
     idx2classes[proc_i] = [int(line) for line in lines]
@@ -410,7 +414,8 @@ def create_data_tree(dataset, all_ranks_data, ds_idx, train_node, idx2bin, heigh
     graph_path = os.path.join(opt.graph_file + '_' + str(opt.n_clusters) + '_' + ''.join(branching_l) + 'ht' + str(height))
 
     #ranks are 1-based
- 
+    print("$$$$$$$$$$$$", branching_l)
+
     if len(branching_l) == 1:
         #only use distance at top level of tree
         ranks = create_graph.create_knn_graph(data, k=opt.k, opt=opt) #should supply opt

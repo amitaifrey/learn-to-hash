@@ -269,13 +269,13 @@ class EvalNode():
         if self.model is None:
             #if kmeans
             if self.kmsolver is not None:
-                pred_idx = self.kmsolver.predict(qu.unsqueeze(0), k=n_bins)
+                pred_idx = self.kmsolver.predict(qu.unsqueeze(0).float(), k=n_bins)
                 pred_idx = pred_idx.reshape(-1)
             else:
                 pred_idx = [self.idx2kahip[int(qu_idx)]]
         else:
             #qu_n.unsqueeze(0)
-            _, pred_idx = torch.topk(self.model(qu.unsqueeze(0)), k=n_bins, dim=1, largest=True)
+            _, pred_idx = torch.topk(self.model(qu.unsqueeze(0).float()), k=n_bins, dim=1, largest=True)
             
             #flatten, since pred_idx is one nested tensor
             pred_idx = pred_idx.view(-1)

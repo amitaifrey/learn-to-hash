@@ -260,7 +260,10 @@ def load_data(data_dir, opt):
                 dataset = np.load(osp.join(utils.data_dir, "sift_dataset_unnorm.npy"))
                 queries = np.load(osp.join(utils.data_dir, "sift_queries_unnorm.npy"))
                 neigh = np.load(osp.join(utils.data_dir, "sift_answers_unnorm.npy"))
- 
+        elif opt.lastfm:
+                dataset = np.load(osp.join(utils.data_dir, "lastfm_dataset_unnorm.npy"))
+                queries = np.load(osp.join(utils.data_dir, "lastfm_queries_unnorm.npy"))
+                neigh = np.load(osp.join(utils.data_dir, "lastfm_answers_unnorm.npy"))
         elif opt.sift_c:
                 dataset = np.load(osp.join(utils.data_dir, 'sift_c_dataset.npy'))
                 queries = np.load(osp.join(utils.data_dir, 'sift_c_queries.npy'))
@@ -312,6 +315,8 @@ def run_kmeans(ds, qu, neigh, n_bins, n_clusters, height, ht2cutsz, opt):
         
         if opt.sift:
                 kmeans_path = os.path.join(data_dir, 'sift', 'sift_dsroot{}ht{}'.format(n_clusters, height))
+        if opt.lastfm:
+                kmeans_path = os.path.join(data_dir, 'lastfm', 'lastfm_dsroot{}ht{}'.format(n_clusters, height))
         elif opt.glove:
                 if opt.fast_kmeans:
                         kmeans_path = os.path.join(data_dir, 'kmeans', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))

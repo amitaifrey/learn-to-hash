@@ -121,7 +121,7 @@ def create_knn_sub_graph(all_ranks, idx2weights, ds_idx, data, opt):
     for idx, nn in idx2nn.items():
         ranks[nn-1].append(idx+1)
         
-   
+    print("%%%", len(ranks), len(cur_ranks), len(ds_idx2idx), len(ds_idx), len(idx2nn))
     return ranks
     
 '''
@@ -205,7 +205,7 @@ def deserialize_create_graph():
         data.to(device="cuda")
 
     #data = utils.normalize(data)
-    opt.normalize_data = True
+    #opt.normalize_data = True
     #subsample_ = False
     subsample = 0 #10
     if subsample > 0:        
