@@ -4,5 +4,10 @@
 kahip_dir="../KaHIP"
 data_dir=data
 glove_dir=data/glove
+glove_25_dir=data/glove_25
+glove_200_dir=data/glove_200
 sift_dir=data/sift
 lastfm_dir=data/lastfm
+kosarak_dir=data/kosarak
+deep_dir=data/deep
+gist_dir=data/gist

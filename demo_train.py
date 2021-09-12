@@ -19,6 +19,14 @@ if __name__ == '__main__':
         dataset = utils.load_glove_data('train').to(utils.device)
         queryset = utils.load_glove_data('query').to(utils.device)    
         neighbors = utils.load_glove_data('answers').to(utils.device)
+    elif opt.glove_25:
+        dataset = utils.load_glove_25_data('train').to(utils.device)
+        queryset = utils.load_glove_25_data('query').to(utils.device)
+        neighbors = utils.load_glove_25_data('answers').to(utils.device)
+    elif opt.glove_200:
+        dataset = utils.load_glove_200_data('train').to(utils.device)
+        queryset = utils.load_glove_200_data('query').to(utils.device)
+        neighbors = utils.load_glove_200_data('answers').to(utils.device)
     elif opt.sift:
         dataset = utils.load_sift_data('train').to(utils.device)
         queryset = utils.load_sift_data('query').to(utils.device)    

@@ -7,10 +7,13 @@ import struct
 def serialize(a, file_name):
     if len(a.shape) != 2:
         raise Exception('array must be two-dimensional')
-    if a.dtype != np.float32 and a.dtype != np.int32:
+    if a.dtype != np.float32 and a.dtype != np.int32 and a.dtype != np.bool:
         raise Exception('invalid dtype')
-    if a.dtype == np.float32:
+    if a.dtype == np.float32 or a.dtype == np.float64:
         spec = 'f'
+    elif a.dtype == np.bool:
+        spec = 'b'
+        #a = np.packbits(a, axis=1)
     else:
         spec = 'i'
     print(spec)

@@ -10,8 +10,10 @@ import pickle
 import argparse
 from scipy.stats import ortho_group
 import matplotlib
+import numba
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from scipy.spatial import distance
 #import seaborn as sns
 #import pandas as pd
 
@@ -39,6 +41,10 @@ name2config = read_config()
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+def get_device(opt):
+    return 'cuda' if torch.cuda.is_available() and not opt.kosarak else 'cpu'
+
+
 kahip_dir = name2config['kahip_dir']
 graph_file = 'knn.graph'
 data_dir = name2config['data_dir']
@@ -47,9 +53,14 @@ results_dir = 'results'
 parts_path = osp.join(data_dir, 'partition', '')
 dsnode_path = osp.join(data_dir, 'train_dsnode')
 
-glove_dir = name2config['glove_dir'] 
+glove_dir = name2config['glove_dir']
+glove_25_dir = name2config['glove_25_dir']
+glove_200_dir = name2config['glove_200_dir']
 sift_dir = name2config['sift_dir']
 lastfm_dir = name2config['lastfm_dir']
+kosarak_dir = name2config['kosarak_dir']
+gist_dir = name2config['gist_dir']
+deep_dir = name2config['deep_dir']
 
 #starter numbers
 N_CLUSTERS = 256 #16
@@ -77,7 +88,7 @@ def parse_args():
     parser.add_argument('--graph_file', default=graph_file, help='file to store knn graph')
 
     parser.add_argument('--dataset_name', default='sift', type=str, help='Specify dataset name, can be one of "glove", "sift", "prefix10m", "lastfm"' \
-                        '"glove_c" (quantized glove), "sift_c" (quantized sift), or your customized data with corresponding loader in utils.py ')
+                        ', "kosarak", "glove_c" (quantized glove), "sift_c" (quantized sift), or your customized data with corresponding loader in utils.py ')
     '''
     #keeping here for reference in case someone cloned this earlier
     parser.add_argument('--glove', default=False, help='whether using glove data')
@@ -113,19 +124,29 @@ def parse_args():
 
     opt = parser.parse_args()
 
-    opt.glove, opt.sift, opt.glove_c, opt.sift_c, opt.prefix10m, opt.lastfm = [False]*6
-    if opt.dataset_name in ['glove','sift','glove_c','sift_c','prefix10m','lastfm']:
+    opt.glove, opt.sift, opt.glove_c, opt.sift_c, opt.prefix10m, opt.lastfm, opt.kosarak, opt.glove_25, opt.glove_200, opt.deep, opt.gist = [False]*11
+    if opt.dataset_name in ['glove','sift','glove_c','sift_c','prefix10m','lastfm','kosarak','glove_25','glove_200','deep','gist']:
         setattr(opt, opt.dataset_name, True)
     else:
-        raise Exception('Dataset name must be one of "glove", "sift", "prefix10m", "lastfm"' \
+        raise Exception('Dataset name must be one of "glove", "sift", "prefix10m", "lastfm", "deep", "gist", ' \
                         '"glove_c" (quantized glove), or "sift_c" (quantized sift)')
 
     if opt.glove:
         opt.graph_file = osp.join(glove_dir, 'graph.txt')
+    elif opt.glove_25:
+        opt.graph_file = osp.join(glove_25_dir, 'graph.txt')
+    elif opt.glove_200:
+        opt.graph_file = osp.join(glove_200_dir, 'graph.txt')
     elif opt.sift:
         opt.graph_file = osp.join(sift_dir, 'graph.txt')
     elif opt.lastfm:
         opt.graph_file = osp.join(lastfm_dir, 'graph.txt')
+    elif opt.kosarak:
+        opt.graph_file = osp.join(kosarak_dir, 'graph.txt')
+    elif opt.deep:
+        opt.graph_file = osp.join(deep_dir, 'graph.txt')
+    elif opt.gist:
+        opt.graph_file = osp.join(gist_dir, 'graph.txt')
     elif opt.prefix10m:
         opt.graph_file = osp.join(data_dir, 'prefix10m_graph_10.txt')
     else:
@@ -135,12 +156,22 @@ def parse_args():
     
     if opt.glove:    
         opt.n_input = 100
+    elif opt.glove_25:
+        opt.n_input = 25
+    elif opt.glove_200:
+        opt.n_input = 200
     elif opt.glove_c:
         opt.n_input = 100        
     elif opt.sift or opt.sift_c:
         opt.n_input = 128
     elif opt.lastfm:
         opt.n_input = 65
+    elif opt.kosarak:
+        opt.n_input = 27983
+    elif opt.deep:
+        opt.n_input = 96
+    elif opt.gist:
+        opt.n_input = 960
     elif opt.prefix10m:
         opt.n_input = 96 
     else:
@@ -322,7 +353,48 @@ def load_glove_data(type='query', opt=None):
         # return data
     else:
         raise Exception('Unsupported data type')
-    
+
+'''
+All data are normalized.
+glove_dir : '~/partition/glove-100-angular/normalized'
+'''
+def load_glove_25_data(type='query', opt=None):
+    if type == 'query':
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_25_queries.npy')))
+    elif type == 'answers':
+        #answers are NN of the query points
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_25_answers.npy')))
+    elif type == 'train':
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_25_dataset.npy')))
+        # if opt is not None and opt.subsample > 1:
+        #     #load subsampled indices
+        #     sub_idx = torch.load(' ')
+        #     data = data[sub_idx]
+        # return data
+    else:
+        raise Exception('Unsupported data type')
+
+'''
+All data are normalized.
+glove_dir : '~/partition/glove-100-angular/normalized'
+'''
+def load_glove_200_data(type='query', opt=None):
+    if type == 'query':
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_200_queries.npy')))
+    elif type == 'answers':
+        #answers are NN of the query points
+        print("loading glove answers")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_200_answers.npy')))
+    elif type == 'train':
+        return torch.from_numpy(np.load(osp.join(data_dir, 'glove_200_dataset.npy')))
+        # if opt is not None and opt.subsample > 1:
+        #     #load subsampled indices
+        #     sub_idx = torch.load(' ')
+        #     data = data[sub_idx]
+        # return data
+    else:
+        raise Exception('Unsupported data type')
+
 def load_glove_sub_data(type='query', opt=None):    
     if type == 'query':
         return torch.from_numpy(np.load(osp.join(data_dir, 'glove_queries.npy')))
@@ -397,14 +469,50 @@ glove_dir : '~/partition/glove-100-angular/normalized'
 def load_lastfm_data(type='query'):
     if type == 'query':
         print("loading lastfm queries")
-        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_queries_unnorm.npy')))
+        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_queries.npy')))
     elif type == 'answers':
         #answers are NN of the query points
         print("loading lastfm answers")
-        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_answers_unnorm.npy')))
+        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_answers.npy')))
     elif type == 'train':
         print("loading lastfm dataset")
-        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_dataset_unnorm.npy')))
+        return torch.from_numpy(np.load(osp.join(data_dir, 'lastfm_dataset.npy')))
+    else:
+        raise Exception('Unsupported data type')
+
+'''
+All data are normalized.
+glove_dir : '~/partition/glove-100-angular/normalized'
+'''
+def load_deep_data(type='query'):
+    if type == 'query':
+        print("loading deep queries")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'deep_queries.npy')))
+    elif type == 'answers':
+        #answers are NN of the query points
+        print("loading deep answers")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'deep_answers.npy')))
+    elif type == 'train':
+        print("loading deep dataset")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'deep_dataset.npy')))
+    else:
+        raise Exception('Unsupported data type')
+
+'''
+All data are normalized.
+glove_dir : '~/partition/glove-100-angular/normalized'
+'''
+def load_gist_data(type='query'):
+    if type == 'query':
+        print("loading gist queries")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'gist_queries.npy')))
+    elif type == 'answers':
+        #answers are NN of the query points
+        print("loading gist answers")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'gist_answers.npy')))
+    elif type == 'train':
+        print("loading gist dataset")
+        return torch.from_numpy(np.load(osp.join(data_dir, 'gist_dataset.npy')))
     else:
         raise Exception('Unsupported data type')
 
@@ -448,6 +556,48 @@ def glove_top_parts_path(n_parts, opt):
     return glove_top_parts_path
 
 '''
+Glove data according
+Input:
+-n_parts: number of parts.
+'''
+def glove_25_top_parts_path(n_parts, opt):
+    if n_parts not in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]:
+        raise Exception('Glove partitioning has not been precomputed for {} parts.'.format(n_parts))
+    if opt.subsample > 1:
+        return osp.join(data_dir, 'partition', '16strongglove0ht1_sub10')
+        ##return osp.join(glove_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition{}.txt'.format(opt.subsample))
+    #strength = 'strong' #'eco' if n_parts in [128, 256] else 'strong'
+    strength = opt.kahip_config
+    if opt.k_graph == 10:
+        glove_25_top_parts_path = osp.join(glove_25_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    elif opt.k_graph == 50:
+        glove_25_top_parts_path = osp.join(glove_25_dir, '50', 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    else:
+        raise Exception('knn graph for k={} not supported'.format(opt.k_graph))
+    return glove_25_top_parts_path
+
+'''
+Glove data according
+Input:
+-n_parts: number of parts.
+'''
+def glove_200_top_parts_path(n_parts, opt):
+    if n_parts not in [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]:
+        raise Exception('Glove partitioning has not been precomputed for {} parts.'.format(n_parts))
+    if opt.subsample > 1:
+        return osp.join(data_dir, 'partition', '16strongglove0ht1_sub10')
+        ##return osp.join(glove_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition{}.txt'.format(opt.subsample))
+    #strength = 'strong' #'eco' if n_parts in [128, 256] else 'strong'
+    strength = opt.kahip_config
+    if opt.k_graph == 10:
+        glove_200_top_parts_path = osp.join(glove_200_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    elif opt.k_graph == 50:
+        glove_200_top_parts_path = osp.join(glove_200_dir, '50', 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    else:
+        raise Exception('knn graph for k={} not supported'.format(opt.k_graph))
+    return glove_200_top_parts_path
+
+'''
 LastFM partitioning.
 Input:
 -n_parts: number of parts.
@@ -468,6 +618,48 @@ def lastfm_top_parts_path(n_parts, opt):
 
     return lastfm_top_parts_path
 
+'''
+Deep partitioning.
+Input:
+-n_parts: number of parts.
+'''
+def deep_top_parts_path(n_parts, opt):
+    if n_parts not in [16, 256]:
+        raise Exception('Deep partitioning has not been precomputed for {} parts.'.format(n_parts))
+
+    #strength = 'eco' if n_parts in [128, 256] else 'strong'
+    #strength = 'strong'
+    strength = opt.kahip_config
+    if opt.k_graph == 10:
+        deep_top_parts_path = osp.join(deep_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    elif opt.k_graph == 50:
+        raise Exception('knn graph')
+    else:
+        raise Exception('knn graph for k={} not supported'.format(opt.k_graph))
+
+    return deep_top_parts_path
+
+'''
+Deep partitioning.
+Input:
+-n_parts: number of parts.
+'''
+def gist_top_parts_path(n_parts, opt):
+    if n_parts not in [16, 256]:
+        raise Exception('Deep partitioning has not been precomputed for {} parts.'.format(n_parts))
+
+    #strength = 'eco' if n_parts in [128, 256] else 'strong'
+    #strength = 'strong'
+    strength = opt.kahip_config
+    if opt.k_graph == 10:
+        gist_top_parts_path = osp.join(gist_dir, 'partition_{}_{}'.format(n_parts, strength), 'partition.txt')
+    elif opt.k_graph == 50:
+        raise Exception('knn graph')
+    else:
+        raise Exception('knn graph for k={} not supported'.format(opt.k_graph))
+
+    return gist_top_parts_path
+
 def prefix10m_top_parts_path(n_parts, opt):
     if n_parts not in [8]:
         raise Exception('SIFT partitioning has not been precomputed for {} parts.'.format(n_parts))
@@ -481,6 +673,17 @@ def prefix10m_top_parts_path(n_parts, opt):
     
     return sift_top_parts_path
 
+@numba.njit(fastmath=True,cache = True,parallel=True)
+def matjaccard(m1, m2):
+    mr = np.empty((m2.shape[0], m1.shape[1]), dtype=np.float64)
+    for i in numba.prange(mr.shape[0]):
+        for j in numba.prange(i, mr.shape[1]):
+            intersection = np.logical_and(m1[:, j], m2[i, :])
+            union = np.logical_or(m1[:, j], m2[i, :])
+            mr[i, j] = intersection.sum() / float(union.sum())
+            mr[j, i] = mr[i, j]
+    return mr
+
 '''
 Memory-compatible. 
 Ranks of closest points not self.
@@ -493,7 +696,7 @@ Input:
 -include_self: include the point itself in the final ranking.
 '''
 def dist_rank(data_x, k, data_y=None, largest=False, opt=None, include_self=False):
-    if isinstance(data_x, np.ndarray):
+    if isinstance(data_x, np.ndarray) and not opt.kosarak:
         data_x = torch.from_numpy(data_x)
 
     if data_y is None:
@@ -502,43 +705,52 @@ def dist_rank(data_x, k, data_y=None, largest=False, opt=None, include_self=Fals
         if isinstance(data_y, np.ndarray):
             data_y = torch.from_numpy(data_y)
     k0 = k
-    device_o = data_x.device
-    data_x = data_x.to(device)
-    data_y = data_y.to(device)
-    
-    (data_x_len, dim) = data_x.size()
-    data_y_len = data_y.size(0)
+
+    if get_device(opt) is 'cuda' and not opt.gist:
+        data_x = data_x.to(get_device(opt))
+        data_y = data_y.to(get_device(opt))
+
+    (data_x_len, dim) = data_x.shape
+    data_y_len = data_y.shape[0]
+
     #break into chunks. 5e6  is total for MNIST point size
     #chunk_sz = int(5e6 // data_y_len)
     chunk_sz = 16384
     chunk_sz = 300 #700 mem error. 1 mil points
-    if data_y_len > 990000:
-        chunk_sz = 100 #50 if over 1.1 mil
+    if opt.kosarak:
+        #chunk_sz = 74962 #50 if over 1.1 mil
+        chunk_sz = 100000
         #chunk_sz = 500 #1000 if over 1.1 mil 
     else:
-        chunk_sz = 100
+        chunk_sz = 10000
 
     if k+1 > len(data_y):
         k = len(data_y) - 1
     #if opt is not None and opt.sift:
-    if device == 'cuda':
+    if get_device(opt) == 'cuda' and not opt.gist:
         dist_mx = torch.cuda.LongTensor(data_x_len, k+1)
+    # elif not opt.kosarak:
+    #     dist_mx = torch.LongTensor(data_x_len, k+1)
     else:
         dist_mx = torch.LongTensor(data_x_len, k+1)
     data_normalized = True if opt is not None and opt.normalize_data else False
-    largest = True if largest else (True if data_normalized else False)
-    
+    largest = True if largest or opt.kosarak else (True if data_normalized else False)
+
     #compute l2 dist <--be memory efficient by blocking
     total_chunks = int((data_x_len-1) // chunk_sz) + 1
     file_ops = False
-    if data_y_len >= 990000:
+    if data_y_len >= 990000 or opt.kosarak:
         print('total chunks ', total_chunks)
         file_ops = True
     file_ops = False
-    y_t = data_y.t()
-    if not data_normalized:
-        y_norm = (data_y**2).sum(-1).view(1, -1)
-    del data_y
+
+    if opt.kosarak:
+        y_t = data_y.transpose()
+    else:
+        y_t = data_y.t()
+        if not data_normalized and not opt.kosarak:
+            y_norm = (data_y**2).sum(-1).view(1, -1)
+        del data_y
 
     if opt.glove:
         dist_file = osp.join(glove_dir, 'dist_{}.npy'.format(total_chunks))
@@ -556,7 +768,10 @@ def dist_rank(data_x, k, data_y=None, largest=False, opt=None, include_self=Fals
             cur_len = upto-base
             x = data_x[base : upto]
 
-            if not data_normalized:
+            if opt.kosarak:
+                dist = matjaccard(y_t, x)
+                dist = torch.from_numpy(dist)
+            elif not data_normalized:
                 x_norm = (x**2).sum(-1).view(-1, 1)
                 #plus op broadcasts
                 dist = x_norm + y_norm
@@ -580,7 +795,7 @@ def dist_rank(data_x, k, data_y=None, largest=False, opt=None, include_self=Fals
         dist_mx = torch.from_numpy(np.load(dist_file))
         print("loaded dist_mx:", dist_file)
 
-    topk = dist_mx.to(device)
+    topk = dist_mx.to(get_device(opt))
     if k > 3 and opt is not None and opt.sift:
         #topk = dist_mx
         #sift contains duplicate points, don't run this in general.

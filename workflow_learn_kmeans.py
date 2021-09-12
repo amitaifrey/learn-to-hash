@@ -247,6 +247,14 @@ def load_data(data_dir, opt):
                 dataset = np.load(osp.join(utils.data_dir, 'glove_dataset.npy'))
                 queries = np.load(osp.join(utils.data_dir, 'glove_queries.npy'))
                 neigh = np.load(osp.join(utils.data_dir, 'glove_answers.npy'))
+        elif opt.glove_25:
+                dataset = np.load(osp.join(utils.data_dir, 'glove_25_dataset.npy'))
+                queries = np.load(osp.join(utils.data_dir, 'glove_25_queries.npy'))
+                neigh = np.load(osp.join(utils.data_dir, 'glove_25_answers.npy'))
+        elif opt.glove_200:
+                dataset = np.load(osp.join(utils.data_dir, 'glove_200_dataset.npy'))
+                queries = np.load(osp.join(utils.data_dir, 'glove_200_queries.npy'))
+                neigh = np.load(osp.join(utils.data_dir, 'glove_200_answers.npy'))
                 #if DEBUG:
                 #dataset = dataset[:5000]
                 #neigh = utils.dist_rank(torch.from_numpy(queries).to(utils.device), k=10, data_y=torch.from_numpy(dataset).to(utils.device), opt=opt).cpu().numpy()
@@ -322,6 +330,16 @@ def run_kmeans(ds, qu, neigh, n_bins, n_clusters, height, ht2cutsz, opt):
                         kmeans_path = os.path.join(data_dir, 'kmeans', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
                 else:
                         kmeans_path = os.path.join(data_dir, 'kmeans', 'kmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
+        elif opt.glove_25:
+                if opt.fast_kmeans:
+                        kmeans_path = os.path.join(data_dir, 'kmeans_glove_25', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
+                else:
+                        kmeans_path = os.path.join(data_dir, 'kmeans_glove_25', 'kmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
+        elif opt.glove_200:
+                if opt.fast_kmeans:
+                        kmeans_path = os.path.join(data_dir, 'kmeans_glove_200', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
+                else:
+                        kmeans_path = os.path.join(data_dir, 'kmeans_glove_200', 'kmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
         elif opt.glove_c:
                 #if opt.fast_kmeans:
                 kmeans_path = os.path.join(data_dir, 'kmeans_glove_c', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
@@ -496,6 +514,10 @@ def run_main(height_preset, ds, qu, neigh, opt):
         if opt.write_res: #False 
                 if opt.glove:
                         res_path = os.path.join('results', 'linear2_glove.md')
+                elif opt.glove_25:
+                        res_path = os.path.join('results', 'linear2_glove_25.md')
+                elif opt.glove_200:
+                        res_path = os.path.join('results', 'linear2_glove_200.md')
                 elif opt.glove_c:
                         res_path = os.path.join('results', 'linear2_glove_c.md')  
                 elif opt.sift:
@@ -516,6 +538,12 @@ def run_main(height_preset, ds, qu, neigh, opt):
         if opt.glove:
                 pickle_path = os.path.join(data_dir, 'glove', 'kmeans_ht{}.pkl'.format(height))
                 json_path = os.path.join(data_dir, 'glove', 'kmeans_ht{}.json'.format(height))
+        elif opt.glove_25:
+                pickle_path = os.path.join(data_dir, 'glove_25', 'kmeans_ht{}.pkl'.format(height))
+                json_path = os.path.join(data_dir, 'glove_25', 'kmeans_ht{}.json'.format(height))
+        elif opt.glove_200:
+                pickle_path = os.path.join(data_dir, 'glove_200', 'kmeans_ht{}.pkl'.format(height))
+                json_path = os.path.join(data_dir, 'glove_200', 'kmeans_ht{}.json'.format(height))
         elif opt.glove_c:
                 pickle_path = os.path.join(data_dir, 'glove_c', 'kmeans_ht{}.pkl'.format(height))
                 json_path = os.path.join(data_dir, 'glove_c', 'kmeans_ht{}.json'.format(height))

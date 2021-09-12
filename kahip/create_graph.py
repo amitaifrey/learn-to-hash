@@ -121,7 +121,6 @@ def create_knn_sub_graph(all_ranks, idx2weights, ds_idx, data, opt):
     for idx, nn in idx2nn.items():
         ranks[nn-1].append(idx+1)
         
-    print("%%%", len(ranks), len(cur_ranks), len(ds_idx2idx), len(ds_idx), len(idx2nn))
     return ranks
     
 '''
@@ -189,19 +188,32 @@ def deserialize_create_graph():
     #data = torch.from_numpy(np.load(osp.join(utils.data_dir, 'sift_dataset_unnorm.npy')))
     if opt.glove:
         dataset_name = 'glove' #'prefix10m' #'glove'
+    elif opt.glove_25:
+        dataset_name = 'glove_25'  # 'prefix10m' #'glove'
+    elif opt.glove_200:
+        dataset_name = 'glove_200'  # 'prefix10m' #'glove'
     elif opt.sift:
         dataset_name = 'sift'  # 'prefix10m' #'glove'
     elif opt.lastfm:
         dataset_name = 'lastfm'  # 'prefix10m' #'glove'
+    elif opt.kosarak:
+        dataset_name = 'kosarak'  # 'prefix10m' #'glove'
+    elif opt.deep:
+        dataset_name = 'deep'  # 'prefix10m' #'glove'
+    elif opt.gist:
+        dataset_name = 'gist'  # 'prefix10m' #'glove'
     else:
         raise Exception("no valid dataset")
     #opt.ranks_path = 'data/{}_answers.npy'.format(dataset_name)
     
     #10 is subsampling frequency
     #data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset.npy'.format(dataset_name))))
-    data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset_unnorm.npy'.format(dataset_name))))
+    if opt.kosarak:
+        data = np.load(osp.join(utils.data_dir, '{}_dataset_unnorm.npy'.format(dataset_name)))
+    else:
+        data = torch.from_numpy(np.load(osp.join(utils.data_dir, '{}_dataset_unnorm.npy'.format(dataset_name))))
 
-    if torch.cuda.is_available():
+    if torch.cuda.is_available() and not opt.kosarak:
         data.to(device="cuda")
 
     #data = utils.normalize(data)

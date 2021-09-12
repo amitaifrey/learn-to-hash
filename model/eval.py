@@ -23,12 +23,18 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 if __name__ == '__main__':
     
     opt = utils.parse_args()
-    opt.data_dir = "data"
+    print(opt)
 
     if True:
         if opt.glove:
             queryset = utils.load_glove_data('query').to(utils.device)
             neighbors = utils.load_glove_data('answers').to(utils.device)
+        elif opt.glove_25:
+            queryset = utils.load_glove_25_data('query').to(utils.device)
+            neighbors = utils.load_glove_25_data('answers').to(utils.device)
+        elif opt.glove_200:
+            queryset = utils.load_glove_200_data('query').to(utils.device)
+            neighbors = utils.load_glove_200_data('answers').to(utils.device)
         elif opt.sift:
             queryset = utils.load_sift_data('query').to(utils.device)
             neighbors = utils.load_sift_data('answers').to(utils.device)
@@ -94,6 +100,12 @@ if __name__ == '__main__':
         if opt.write_res:
             if opt.glove:
                 res_path = osp.join('results', 'glove_train_S.md')
+            elif opt.glove_25:
+                res_path = osp.join('results', 'glove_25_train_S.md')
+            elif opt.glove_200:
+                res_path = osp.join('results', 'glove_200_train_S.md')
+            elif opt.lastfm:
+                res_path = osp.join('results', 'lastfm_train_S.md')
             elif opt.sift:
                 res_path = osp.join('results', 'sift_train_S.md')
             elif opt.lastfm:

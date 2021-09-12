@@ -199,12 +199,18 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clu
     markers = {"norm": "s", "95": "^"}
 
     fig = matplotlib.pyplot.gcf()
-    fig.set_size_inches(10, 5.5)
+    #fig.set_size_inches(10, 5.5)
     #sns.set_style("whitegrid")
     fig = sns.lineplot(x='probe_count', y='acc', hue='hue', style='style', markers=markers, data=df, legend=False, palette=palette)
 
     if opt.glove:
         data_name = 'GloVe'
+    elif opt.glove_25:
+        data_name = 'GloVe25'
+    elif opt.glove_200:
+        data_name = 'GloVe200'
+    elif opt.lastfm:
+        data_name = 'LastFM'
     elif opt.sift:
         data_name = 'SIFT'
     elif opt.glove_c:
@@ -213,9 +219,14 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clu
         data_name = 'SIFTCatalyzer'
     else:
         data_name = 'MNIST'
-        
-    fig.set_title('Number of candidates vs accuracy on {}. m: {} on {} levels'.format(data_name, n_clusters, height))
+
+    title = '{}, one level, {} bins'.format(data_name, n_clusters)
+    if height == 2:
+        title = '{}, two levels, {} bins'.format(data_name, n_clusters)
+    #fig.set_title(title, y=-0.01)
     fig.set(ylabel='Accuracy', xlabel='Number of candidates')
+    fig.xaxis.label.set_visible(False)
+    fig.yaxis.label.set_visible(False)
 
     fig.set(ylim=(.75, .97))
     y_major_ticks = np.arange(0.75, 1, 0.05)
@@ -253,6 +264,10 @@ def acc_probe_lineplot_main():
 
     if opt.glove:
         data_name = "glove"
+    elif opt.glove_25:
+        data_name = "glove_25"
+    elif opt.glove_200:
+        data_name = "glove_200"
     elif opt.sift:
         data_name = "sift"
     else:

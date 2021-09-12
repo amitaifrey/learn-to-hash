@@ -420,6 +420,10 @@ def deserialize_eval(queryset, answers, height, n_clusters, n_bins, opt):
     #replace with function!
     if opt.glove:
         data_name = 'glove'
+    elif opt.glove_25:
+        data_name = 'glove_25'
+    elif opt.glove_200:
+        data_name = 'glove_200'
     elif opt.sift:
         data_name = 'sift'
     elif opt.prefix10m:

@@ -46,7 +46,7 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
     if n_class < 2:
         raise Exception('wrong number of parts: {}. Should be greater than or equal to 2.'.format(n_class))
 
-    opt.kahip_config = 'fast'
+    opt.kahip_config = 'eco'
     kahip_config = opt.kahip_config
 
     #if configuration != 'fast' and configuration != 'eco' and configuration != 'strong':
@@ -71,12 +71,24 @@ def run_kahip(graph_path, datalen, branching_l, height, opt):
     if opt.glove and (branching_l_len == 1):
         #if glove top level, use precomputed partition
         parts_path = utils.glove_top_parts_path(opt.n_clusters, opt)
+    elif opt.glove_25 and (branching_l_len == 1):
+        # if glove top level, use precomputed partition
+        parts_path = utils.glove_25_top_parts_path(opt.n_clusters, opt)
+    elif opt.glove_200 and (branching_l_len == 1):
+        # if glove top level, use precomputed partition
+        parts_path = utils.glove_200_top_parts_path(opt.n_clusters, opt)
     elif opt.sift and (branching_l_len == 1):
         #if glove top level, use precomputed partition
         parts_path = utils.sift_top_parts_path(opt.n_clusters, opt)
     elif opt.lastfm and (branching_l_len == 1):
         # if glove top level, use precomputed partition
         parts_path = utils.lastfm_top_parts_path(opt.n_clusters, opt)
+    elif opt.deep and (branching_l_len == 1):
+        # if glove top level, use precomputed partition
+        parts_path = utils.deep_top_parts_path(opt.n_clusters, opt)
+    elif opt.gist and (branching_l_len == 1):
+        # if glove top level, use precomputed partition
+        parts_path = utils.gist_top_parts_path(opt.n_clusters, opt)
     elif opt.prefix10m and (branching_l_len == 1):
         #if glove top level, use precomputed partition
         parts_path = utils.prefix10m_top_parts_path(opt.n_clusters, opt)
@@ -117,7 +129,7 @@ def add_datanode_children(dataset, all_ranks_data, ds_idx, parent_train_node, id
     '''
     For 2nd level, SIFT, say 64 parts, beyond 25 epochs train does not improve much.
     '''
-    if opt.glove or opt.sift or opt.lastfm:
+    if opt.glove or opt.sift or opt.lastfm or opt.glove_25 or opt.glove_200 or opt.deep or opt.gist:
         n_epochs = 18 if len(branching_l)==1 else 15 #44 opt.n_epochs #opt.n_epochs ################stopping mechanism 65. 18 if len(branching_l)==1 else 15
         # <-for MCCE loss  #glove+sift: 18 then 15
     else:
@@ -414,8 +426,6 @@ def create_data_tree(dataset, all_ranks_data, ds_idx, train_node, idx2bin, heigh
     graph_path = os.path.join(opt.graph_file + '_' + str(opt.n_clusters) + '_' + ''.join(branching_l) + 'ht' + str(height))
 
     #ranks are 1-based
-    print("$$$$$$$$$$$$", branching_l)
-
     if len(branching_l) == 1:
         #only use distance at top level of tree
         ranks = create_graph.create_knn_graph(data, k=opt.k, opt=opt) #should supply opt
@@ -439,8 +449,7 @@ def create_data_tree_root(dataset, all_ranks, ds_idx, train_node, idx2bin, heigh
     print("graph path is: {}".format(graph_path))
     
     #ranks are 1-based
-    if opt.glove or opt.sift or opt.prefix10m or opt.lastfm: #and len(branching_l) == 1:
-
+    if opt.glove or opt.glove_25 or opt.glove_200 or opt.sift or opt.prefix10m or opt.lastfm or opt.deep or opt.gist: #and len(branching_l) == 1:
         # if opt.glove:
         #     #custom paths
         # #if opt.glove and opt.k_graph==50: #april, 50NN graph file
@@ -655,10 +664,18 @@ def run_kmkahip(height_preset, opt, dataset, queryset, neighbors):
             data_name = 'sift'
         elif opt.glove:
             data_name = 'glove'
+        elif opt.glove_25:
+            data_name = 'glove_25'
+        elif opt.glove_200:
+            data_name = 'glove_200'
         elif opt.prefix10m:
             data_name = 'prefix10m'
         elif opt.lastfm:
             data_name = 'lastfm'
+        elif opt.deep:
+            data_name = 'deep'
+        elif opt.gist:
+            data_name = 'gist'
         else:
             data_name = 'mnist'
         idx2bin = eval_root.idx2bin
