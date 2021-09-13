@@ -426,6 +426,8 @@ def deserialize_eval(queryset, answers, height, n_clusters, n_bins, opt):
         data_name = 'glove_200'
     elif opt.sift:
         data_name = 'sift'
+    elif opt.gist:
+        data_name = 'gist'
     elif opt.prefix10m:
         data_name = 'prefix10m'
     elif opt.lastfm:

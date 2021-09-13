@@ -38,6 +38,9 @@ if __name__ == '__main__':
         elif opt.sift:
             queryset = utils.load_sift_data('query').to(utils.device)
             neighbors = utils.load_sift_data('answers').to(utils.device)
+        elif opt.gist:
+            queryset = utils.load_gist_data('query').to(utils.device)
+            neighbors = utils.load_gist_data('answers').to(utils.device)
         elif opt.lastfm:
             queryset = utils.load_lastfm_data('query').to(utils.device)
             neighbors = utils.load_lastfm_data('answers').to(utils.device)
@@ -108,6 +111,8 @@ if __name__ == '__main__':
                 res_path = osp.join('results', 'lastfm_train_S.md')
             elif opt.sift:
                 res_path = osp.join('results', 'sift_train_S.md')
+            elif opt.gist:
+                res_path = osp.join('results', 'gist_train_S.md')
             elif opt.lastfm:
                 res_path = osp.join('results', 'lastfm_train_S.md')
             else:

@@ -199,7 +199,7 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clu
     markers = {"norm": "s", "95": "^"}
 
     fig = matplotlib.pyplot.gcf()
-    #fig.set_size_inches(10, 5.5)
+    fig.set_size_inches(10, 5.5)
     #sns.set_style("whitegrid")
     fig = sns.lineplot(x='probe_count', y='acc', hue='hue', style='style', markers=markers, data=df, legend=False, palette=palette)
 
@@ -213,6 +213,8 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clu
         data_name = 'LastFM'
     elif opt.sift:
         data_name = 'SIFT'
+    elif opt.gist:
+        data_name = 'GIST'
     elif opt.glove_c:
         data_name = 'GloVeCatalyzer'
     elif opt.sift_c:
@@ -242,7 +244,7 @@ def acc_probe_lineplot(probe_ar, acc_ar, method_l, hue_l, style_l, height, n_clu
     fig.spines['top'].set_visible(False)
     fig.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.grid()
-    plt.legend(loc='lower right', labels=['k-means (average)', 'k-means (0.95-quantile)', 'Neural LSH (average)', 'Neural LSH (0.95-quantile)'])
+    #plt.legend(loc='lower right', labels=['k-means (average)', 'k-means (0.95-quantile)', 'Neural LSH (average)', 'Neural LSH (0.95-quantile)'])
 
     fig_path = osp.join(utils.results_dir, '{}_{}_{}.jpg'.format(data_name, n_clusters, height))
     fig.figure.savefig(fig_path)
@@ -270,6 +272,8 @@ def acc_probe_lineplot_main():
         data_name = "glove_200"
     elif opt.sift:
         data_name = "sift"
+    elif opt.gist:
+        data_name = "gist"
     else:
         raise Exception("no data name")
 

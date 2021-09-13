@@ -268,6 +268,10 @@ def load_data(data_dir, opt):
                 dataset = np.load(osp.join(utils.data_dir, "sift_dataset_unnorm.npy"))
                 queries = np.load(osp.join(utils.data_dir, "sift_queries_unnorm.npy"))
                 neigh = np.load(osp.join(utils.data_dir, "sift_answers_unnorm.npy"))
+        elif opt.gist:
+                dataset = np.load(osp.join(utils.data_dir, "gist_dataset.npy"))
+                queries = np.load(osp.join(utils.data_dir, "gist_queries.npy"))
+                neigh = np.load(osp.join(utils.data_dir, "gist_answers.npy"))
         elif opt.lastfm:
                 dataset = np.load(osp.join(utils.data_dir, "lastfm_dataset_unnorm.npy"))
                 queries = np.load(osp.join(utils.data_dir, "lastfm_queries_unnorm.npy"))
@@ -323,8 +327,10 @@ def run_kmeans(ds, qu, neigh, n_bins, n_clusters, height, ht2cutsz, opt):
         
         if opt.sift:
                 kmeans_path = os.path.join(data_dir, 'sift', 'sift_dsroot{}ht{}'.format(n_clusters, height))
-        if opt.lastfm:
+        elif opt.lastfm:
                 kmeans_path = os.path.join(data_dir, 'lastfm', 'lastfm_dsroot{}ht{}'.format(n_clusters, height))
+        elif opt.gist:
+                kmeans_path = os.path.join(data_dir, 'gist', 'gist_dsroot{}ht{}'.format(n_clusters, height))
         elif opt.glove:
                 if opt.fast_kmeans:
                         kmeans_path = os.path.join(data_dir, 'kmeans', 'fastkmeans_dsroot{}{}{}_{}'.format(n_clusters, km_method, max_loyd, height))
@@ -519,7 +525,9 @@ def run_main(height_preset, ds, qu, neigh, opt):
                 elif opt.glove_200:
                         res_path = os.path.join('results', 'linear2_glove_200.md')
                 elif opt.glove_c:
-                        res_path = os.path.join('results', 'linear2_glove_c.md')  
+                        res_path = os.path.join('results', 'linear2_glove_c.md')
+                elif opt.gist:
+                        res_path = os.path.join('results', 'linear2_gist.md')
                 elif opt.sift:
                         res_path = os.path.join('results', 'linear2_sift.md')                        
                 elif opt.sift_c:

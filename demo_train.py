@@ -31,6 +31,10 @@ if __name__ == '__main__':
         dataset = utils.load_sift_data('train').to(utils.device)
         queryset = utils.load_sift_data('query').to(utils.device)    
         neighbors = utils.load_sift_data('answers').to(utils.device)
+    elif opt.gist:
+        dataset = utils.load_gist_data('train').to(utils.device)
+        queryset = utils.load_gist_data('query').to(utils.device)
+        neighbors = utils.load_gist_data('answers').to(utils.device)
     elif opt.lastfm:
         dataset = utils.load_lastfm_data('train').to(utils.device)
         queryset = utils.load_lastfm_data('query').to(utils.device)
@@ -43,7 +47,7 @@ if __name__ == '__main__':
     #specify which action to take at each level, actions can be km, kahip, train, or svm. Lower keys indicate closer to leaf.
     #Note that if 'kahip' is included, evaluation must be on training rather than test set, since partitioning was performed on training, but not test, set.
     #e.g.: opt.level2action = {0:'km', 1:'train', 3:'train'}
-    opt.level2action = {0:'train', 1:'train'}
+    opt.level2action = {0:'train', 1:'train', 2:'train', 3: 'train'}
     if opt.height == 2 and opt.n_clusters == 256:
         opt.level2action = {0: 'km', 1: 'train'}
     

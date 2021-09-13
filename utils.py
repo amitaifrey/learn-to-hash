@@ -646,7 +646,7 @@ Input:
 '''
 def gist_top_parts_path(n_parts, opt):
     if n_parts not in [16, 256]:
-        raise Exception('Deep partitioning has not been precomputed for {} parts.'.format(n_parts))
+        raise Exception('Gist partitioning has not been precomputed for {} parts.'.format(n_parts))
 
     #strength = 'eco' if n_parts in [128, 256] else 'strong'
     #strength = 'strong'
@@ -722,12 +722,12 @@ def dist_rank(data_x, k, data_y=None, largest=False, opt=None, include_self=Fals
         chunk_sz = 100000
         #chunk_sz = 500 #1000 if over 1.1 mil 
     else:
-        chunk_sz = 10000
+        chunk_sz = 100
 
     if k+1 > len(data_y):
         k = len(data_y) - 1
     #if opt is not None and opt.sift:
-    if get_device(opt) == 'cuda' and not opt.gist:
+    if get_device(opt) == 'cuda':
         dist_mx = torch.cuda.LongTensor(data_x_len, k+1)
     # elif not opt.kosarak:
     #     dist_mx = torch.LongTensor(data_x_len, k+1)
